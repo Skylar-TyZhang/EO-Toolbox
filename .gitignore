@@ -192,3 +192,7 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+test.ipynb
+HyperPy/HyperspectralReader.py
+HyperPy/minWavelength.py
+HyperPy/MinWavelengthAnalyser.py
