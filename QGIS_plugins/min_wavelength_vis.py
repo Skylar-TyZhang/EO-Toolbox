@@ -1,4 +1,4 @@
-from qgis.PyQt.QtWidgets import QDialog, QVBoxLayout, QLabel
+from qgis.PyQt.QtWidgets import QDialog, QVBoxLayout, QLabel, QInputDialog
 from qgis.gui import QgsMapTool
 from qgis.core import QgsMapLayer, QgsRaster
 import numpy as np
@@ -144,16 +144,42 @@ def get_sensor_info(raster_layer):
     
     # Fallback: Known sensor patterns
     if n_bands == 9:
-        return "ASTER (assumed)", np.array([560, 660, 820, 1650, 2165, 2205, 2260, 2330, 2400])
+        return "ASTER ", np.array([560, 660, 820, 1650, 2165, 2205, 2260, 2330, 2400])
     elif n_bands == 285:
-        return "EMIT (estimated)", np.linspace(380, 2500, 285)
+         "EMIT", np.linspace(380, 2500, 285)
     else:
-        # Generic fallback: use band numbers
-        iface.messageBar().pushMessage(
-            "Warning", 
-            f"Wavelengths not found. Using band numbers for {n_bands} bands.",
-            level=1, duration=5
+        # Generic fallback: ask user for wavelengths        
+        wavelengths_str, ok = QInputDialog.getText(
+            None,
+            "Wavelength Input Required",
+            f"Unknown sensor with {n_bands} bands.\n\n"
+            "Enter wavelengths (comma-separated, in nm):\n"
+            "Example: 400,500,600,700,...",
+            text=""
         )
+        
+        if ok and wavelengths_str.strip():
+            try:
+                wavelengths = np.array([float(w.strip()) for w in wavelengths_str.split(',')])
+                
+                # Validate dimension
+                if len(wavelengths) != n_bands:
+                    iface.messageBar().pushMessage(
+                        "Error",
+                        f"Wavelength count ({len(wavelengths)}) does not match band count ({n_bands})",
+                        level=2, duration=5
+                    )
+                    return f"Unknown ({n_bands} bands)", np.arange(1, n_bands + 1)
+                
+                return f"Custom ({n_bands} bands)", wavelengths
+            except ValueError:
+                iface.messageBar().pushMessage(
+                    "Error",
+                    "Invalid wavelength format. Using band numbers instead.",
+                    level=2, duration=5
+                )
+        
+        # Fallback: use band numbers
         return f"Unknown ({n_bands} bands)", np.arange(1, n_bands + 1)
 
 def get_pixel_values(raster_layer, qgs_point):
